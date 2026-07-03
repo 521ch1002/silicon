@@ -1,0 +1,48 @@
+dimension      3
+      units          metal
+      atom_style     atomic
+      boundary       p p p
+
+      lattice        diamond 5.4320 orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+      region         2 block 0 4 0 4 0 4
+      create_box     1 2
+      create_atoms   1 region 2 basis 1 1
+      mass           * 28.0855
+      label          loop
+      variable       a loop 101
+      variable       v equal 0+$a
+      log            log.$v
+      variable       t equal 3000-($v-1)*25
+      pair_style     sw 
+      pair_coeff      * * Si.sw Si
+     velocity       all create $t 372899 dist gaussian units lattice  
+      neighbor       0.3 multi
+      neigh_modify   delay 2 every 1 check yes
+
+      fix            1 all npt temp $t $t 0.05 iso 1.0 1.0 5.0 drag 0.20
+
+      compute        1 all msd
+      compute        4 all rdf 200 * *
+      compute        6 all orientorder/atom cutoff 2.5
+
+      variable       y equal (atoms*28.0856*10)/(vol*6.023)
+      variable       z equal sqrt(c_1[4])/((((8*vol/atoms)^(1/3))*sqrt(3))/4)
+      fix            2 all ave/time 1000 1 1000 c_4[*] file tmp.rdf$a mode vector
+      variable       w equal vol/atoms
+      thermo_style   custom temp pe v_y v_z v_w density press #c_2[1] c_2[2] c_2[3]
+      dump           1 all custom 20000 log.dump$v id type x y z
+      dump           2 all custom 1000 dump.123.xyz id type c_6[*]
+    fy fz
+      timestep       0.005
+
+      restart        2500000 restart.o$v
+      thermo         1000
+      run            5000000
+      undump         1
+      undump         2
+      uncompute      1
+      uncompute      4
+      uncompute      6
+      next           a
+     
+      jump           silicon.in loop
