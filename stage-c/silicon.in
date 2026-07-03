@@ -1,0 +1,57 @@
+ #LATTICE
+
+      dimension      3
+      units          metal
+      atom_style     atomic
+      boundary       p p p
+      read_data      con.fig.data
+      label          loop
+      variable       a loop 20
+      group          a type 2
+      group          b type 1
+      mass           * 28.0855
+      variable       v equal 0+$a
+     variable        x universe 0.0034357 0.018014 0.0438827 0.0804415 0.126834 0.1819732 0.2445665 0.31314696 0.386107 0.4617367 0.5382633 0.6138929 0.686853 0.7554335 0.81802684 0.8731659 0.9195585 0.9561172 0.9819859 0.9965643
+      log            log.0$v
+      variable       t equal 1450 
+      pair_style     hybrid sw  gauss 2.0
+     velocity       all create $t 372899 dist gaussian units lattice  
+      variable       u equal 8*(1-$x)  
+      pair_coeff      * * sw Si.sw$v NULL Si
+      pair_coeff      1 2 gauss $u 6.93488 2.0 
+      pair_coeff      1 1 none
+      neighbor       0.3 multi
+      neigh_modify   delay 2 every 1 check yes
+      fix            1 a nvt temp $t $t 0.05 drag 0.20
+      fix            2 b setforce 0 0 0 
+
+      compute        1 all msd
+      compute        4 all rdf 200 * *
+      compute        6 all orientorder/atom cutoff 2.5
+      compute        gauss all pair gauss 
+
+      variable       y equal (atoms*28.0856*10)/(vol*6.023)
+      variable       z equal sqrt(c_1[4])/((((8*vol/atoms)^(1/3))*sqrt(3))/4)
+      fix            3 all ave/time 1000 1 1000 c_4[*] file tmp.rdf$a mode vector
+      variable       w equal vol/atoms
+      variable       q equal c_gauss
+      thermo_style   custom temp pe press v_q v_z v_w density lx #c_2[1] c_2[2] c_2[3]
+      dump           1 all custom 100000 log.dump$v id type x y z
+      dump           2 all custom 100000 dump.123.xyz id type c_6[*]
+      timestep       0.005
+
+      restart        3000000 restart.o$v
+      thermo         1000
+      run            6000000
+      write_data     con.fig.data$v
+      undump         1
+      undump         2
+      uncompute      1
+      uncompute      4
+      uncompute      6
+      uncompute      gauss
+      next           a
+      next           x
+         
+      jump           silicon.in loop
+
